@@ -1,6 +1,6 @@
 plugins {
     kotlin("jvm") version "2.1.10"
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("com.gradleup.shadow") version "8.3.5"
     id("io.papermc.paperweight.userdev") version "2.0.0-beta.14"
     id("xyz.jpenilla.run-paper") version "2.3.1"
 }
@@ -22,6 +22,13 @@ kotlin {
 
 tasks.assemble {
     dependsOn(tasks.reobfJar)
+}
+
+tasks.shadowJar {
+    relocate("kotlin", "no-elytras.shaded.kotlin")
+    relocate("kotlinx", "no-elytras.shaded.kotlinx")
+    relocate("org.jetbrains", "no-elytras.shaded.org.jetbrains")
+    relocate("org.intellij", "no-elytras.shaded.org.intellij")
 }
 
 tasks.processResources {
