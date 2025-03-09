@@ -61,7 +61,9 @@ class NoElytras : JavaPlugin(), Listener {
 
     private fun onUsageAttempt(player: Player) {
         player.sendActionBar(forbiddenText)
-        logger.info("Player `${player.name}` attempted to use elytra in `${player.world.name}`")
+        if (logUsages) {
+            logger.info("Player `${player.name}` attempted to use elytra in `${player.world.name}`")
+        }
     }
 
     @EventHandler
