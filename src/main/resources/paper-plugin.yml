@@ -1,0 +1,4 @@
+name: no-elytras
+version: '1.0-SNAPSHOT'
+main: dev.vanutp.no_elytras.NoElytras
+api-version: '1.21'
