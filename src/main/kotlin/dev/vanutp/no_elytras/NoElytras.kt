@@ -7,26 +7,28 @@ import io.papermc.paper.command.brigadier.CommandSourceStack
 import io.papermc.paper.command.brigadier.Commands
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents
 import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.EntityToggleGlideEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.plugin.java.JavaPlugin
+import java.util.logging.Level
 
 
 class NoElytras : JavaPlugin(), Listener {
-    companion object {
-        val FORBIDDEN_TEXT = Component.text("Flying is not allowed here")
-            .color(NamedTextColor.BLUE)
-    }
+    private val mm = MiniMessage.miniMessage()
+    private var forbiddenText: Component = Component.text("")
     private var blacklistWorlds = listOf<String>()
+    private var logUsages = false
 
     private fun reload() {
         saveDefaultConfig()
         reloadConfig()
         blacklistWorlds = config.getStringList("blacklist_worlds")
+        forbiddenText = mm.deserialize(config.getString("forbidden_message") ?: "")
+        logUsages = config.getBoolean("log_usages")
     }
 
     @Suppress("UnstableApiUsage")
@@ -36,8 +38,13 @@ class NoElytras : JavaPlugin(), Listener {
             .then(
                 Commands.literal("reload")
                     .executes { ctx: CommandContext<CommandSourceStack> ->
-                        reload()
-                        ctx.source.sender.sendPlainMessage("Config reloaded")
+                        try {
+                            reload()
+                            ctx.source.sender.sendPlainMessage("Config reloaded")
+                        } catch (e: Exception) {
+                            ctx.source.sender.sendPlainMessage("Config reload failed, see server console")
+                            logger.log(Level.SEVERE, e.message.toString(), e)
+                        }
                         Command.SINGLE_SUCCESS
                     })
             .build()
@@ -52,12 +59,17 @@ class NoElytras : JavaPlugin(), Listener {
         registerCommand()
     }
 
+    private fun onUsageAttempt(player: Player) {
+        player.sendActionBar(forbiddenText)
+        logger.info("Player `${player.name}` attempted to use elytra in `${player.world.name}`")
+    }
+
     @EventHandler
     fun onElytra(e: EntityToggleGlideEvent) {
         val player = e.entity as? Player ?: return
-        if (blacklistWorlds.contains(player.world.name)) {
+        if (e.isGliding && blacklistWorlds.contains(player.world.name)) {
             e.isCancelled = true
-            player.sendActionBar(FORBIDDEN_TEXT)
+            onUsageAttempt(player)
         }
     }
 
@@ -65,7 +77,7 @@ class NoElytras : JavaPlugin(), Listener {
     fun onMove(e: PlayerMoveEvent) {
         if (e.player.isGliding && blacklistWorlds.contains(e.player.world.name)) {
             e.player.isGliding = false
-            e.player.sendActionBar(FORBIDDEN_TEXT)
+            onUsageAttempt(e.player)
         }
     }
 
@@ -73,7 +85,7 @@ class NoElytras : JavaPlugin(), Listener {
     fun onBoost(e: PlayerElytraBoostEvent) {
         if (blacklistWorlds.contains(e.player.world.name)) {
             e.isCancelled = true
-            e.player.sendActionBar(FORBIDDEN_TEXT)
+            onUsageAttempt(e.player)
         }
     }
 }

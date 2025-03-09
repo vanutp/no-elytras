@@ -1,3 +1,5 @@
 blacklist_worlds:
   - world
   - world_nether
+forbidden_message: <blue>Flying is not allowed here
+log_usages: false
